@@ -7,6 +7,10 @@
         path = ./zig;
         description = "Zig template";
       };
+      go = {
+        path = ./go;
+        description = "Go template";
+      };
     };
   };
 }
