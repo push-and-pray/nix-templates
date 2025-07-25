@@ -3,6 +3,10 @@
 
   outputs = {self}: {
     templates = {
+      default = {
+        path = ./default;
+        description = "A development shell";
+      };
       zig = {
         path = ./zig;
         description = "Zig template";
