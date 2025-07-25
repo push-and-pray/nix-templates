@@ -11,6 +11,10 @@
         path = ./go;
         description = "Go template";
       };
+      rust = {
+        path = ./rust;
+        description = "Rust template";
+      };
     };
   };
 }
