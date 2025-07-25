@@ -8,11 +8,9 @@
     nixpkgs,
     ...
   }: let
+    systems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
     forAllSystems = function:
-      nixpkgs.lib.genAttrs [
-        "x86_64-linux"
-        "aarch64-linux"
-      ] (system:
+      nixpkgs.lib.genAttrs systems (system:
         function (import nixpkgs {
           inherit system;
         }));
