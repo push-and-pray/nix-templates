@@ -23,6 +23,10 @@
         path = ./python;
         description = "Python template";
       };
+      risc = {
+        path = ./risc;
+        description = "Risc template";
+      };
     };
   };
 }
