@@ -9,20 +9,20 @@
     ...
   }: let
     systems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
-    forAllSystems = function:
-      nixpkgs.lib.genAttrs systems (system:
-        function (import nixpkgs {
-          inherit system;
-        }));
+    forAllSystems = nixpkgs.lib.genAttrs systems;
   in {
-    devShells = forAllSystems (pkgs: {
-      default = pkgs.mkShell {packages = with pkgs; [zig];};
+    devShells = forAllSystems (system: let
+      pkgs = import nixpkgs {inherit system;};
+    in {
+      default = pkgs.mkShell {packages = with pkgs; [zig zls];};
     });
 
-    packages = forAllSystems (pkgs: {
+    packages = forAllSystems (system: let
+      pkgs = import nixpkgs {inherit system;};
+    in {
       default = pkgs.stdenv.mkDerivation {
         name = "zig";
-        version = "0.0.0";
+        version = "0.1.0";
         src = ./.;
 
         nativeBuildInputs = with pkgs; [
