@@ -1,7 +1,7 @@
 {
   description = "A collection of flake templates";
 
-  outputs = {self}: {
+  outputs = _: {
     templates = {
       default = {
         path = ./default;
@@ -25,7 +25,11 @@
       };
       risc = {
         path = ./risc;
-        description = "Risc template";
+        description = "Risc-V template";
+      };
+      chisel = {
+        path = ./chisel;
+        description = "Chisel template";
       };
     };
   };
