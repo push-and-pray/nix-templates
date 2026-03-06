@@ -1,0 +1,14 @@
+# Handled by nix symlink
+compile_commands.json 
+.direnv/
+build*/
+result*
+.cache/
+
+# C/C++ artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.out

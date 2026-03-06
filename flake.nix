@@ -31,6 +31,10 @@
         path = ./chisel;
         description = "Chisel template";
       };
+      c = {
+        path = ./c;
+        description = "C template";
+      };
     };
   };
 }
