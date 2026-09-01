@@ -1,15 +1,31 @@
+default: build
+
+# Debug build in build/dev, which is where .clangd looks for the database.
 build:
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug
-    cmake --build build
-    ln -sf build/compile_commands.json .
+    cmake --preset dev
+    cmake --build --preset dev
 
+run *args: build
+    ./build/dev/hello {{args}}
+
+# Tests under AddressSanitizer and UBSan.
 test:
-    cmake -B build-test -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON
-    cmake --build build-test
-    cd build-test && ctest --output-on-failure
+    cmake --preset asan
+    cmake --build --preset asan
+    ctest --preset asan
 
+# Same rules and same build config as the flake's tidy check.
+lint: build
+    clang-tidy -p build/dev $(find src tests -name '*.c')
+
+fmt:
+    find src include tests -name '*.[ch]' -exec clang-format -i {} +
+    gersemi -i CMakeLists.txt
+    find . -name '*.nix' -exec nixfmt {} +
+
+# Build the package and run every check in a sandbox, like CI would.
 check:
     nix flake check
 
-run: build
-    ./build/my-exe
+clean:
+    rm -rf build result

@@ -1,2 +1,16 @@
-Checks: "-*, bugprone-*, cert-*, clang-analyzer-*, performance-*, portability-*, readability-*"
-WarningsAsErrors: ""
+# Sensible default set; drop or add globs as the project grows.
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -cert-err33-c,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -readability-identifier-length,
+  -readability-magic-numbers
+HeaderFilterRegex: '.*/(include|src|tests)/.*'
+WarningsAsErrors: '*'
+FormatStyle: file

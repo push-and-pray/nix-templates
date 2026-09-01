@@ -1,8 +1,7 @@
-#include "mylib.h"
+#include "greeting.h"
 #include <stdio.h>
 
 int main(void) {
-  const char *greeting = get_greeting();
-  printf("%s\n", greeting);
+  printf("%s\n", greeting_get());
   return 0;
 }

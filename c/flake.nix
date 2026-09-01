@@ -1,88 +1,107 @@
 {
+  description = "A C project built with CMake";
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    systems.url = "github:nix-systems/default";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    systems,
-    ...
-  }: let
-    forAllSystems = nixpkgs.lib.genAttrs (import systems);
-  in {
-    packages = forAllSystems (
-      system: let
-        pkgs = import nixpkgs {inherit system;};
-        stdenv = pkgs.clangStdenv;
-        base = stdenv.mkDerivation {
-          name = "my-exe";
-          src = pkgs.lib.cleanSource ./.;
-          nativeBuildInputs = with pkgs; [cmake];
-          buildInputs = [];
-        };
-      in rec {
-        default = base.overrideAttrs {
-          cmakeBuildType = "Release";
-        };
+  outputs =
+    {
+      self,
+      nixpkgs,
+      ...
+    }:
+    let
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+    in
+    {
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          default = pkgs.callPackage ./package.nix { stdenv = pkgs.clangStdenv; };
+        }
+      );
 
-        debug = base.overrideAttrs {
-          cmakeBuildType = "Debug";
-        };
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+          package = self.packages.${system}.default;
+        in
+        {
+          default = pkgs.mkShell.override { stdenv = pkgs.clangStdenv; } {
+            inputsFrom = [ package ];
 
-        test = debug.overrideAttrs {
-          doCheck = true;
-          cmakeFlags = (base.cmakeFlags or []) ++ ["-DENABLE_ASAN=ON"];
-          hardeningDisable = ["fortify"];
-        };
-      }
-    );
+            packages =
+              with pkgs;
+              [
+                clang-tools # clangd, clang-format, clang-tidy
+                cmake-language-server
+                gersemi # cmake formatter
+                just
+                lldb
+                nixfmt # nix formatter
+                nixd
+                statix
+                deadnix
+              ]
+              ++ lib.optionals stdenv.hostPlatform.isLinux [ valgrind ];
 
-    devShells = forAllSystems (
-      system: let
-        pkgs = import nixpkgs {inherit system;};
-        stdenv = pkgs.clangStdenv;
-        pkg = self.packages.${system}.debug;
-      in {
-        default = pkgs.mkShell.override {inherit stdenv;} {
-          inputsFrom = [pkg];
-          packages = with pkgs; [
-            clang-tools
-            lldb
-            valgrind
-            just
-          ];
-        };
-      }
-    );
+            # Local builds default to Debug (-O0), where the wrapper's
+            # _FORTIFY_SOURCE hardening only produces warning noise.
+            hardeningDisable = [ "fortify" ];
+          };
+        }
+      );
 
-    checks = forAllSystems (
-      system: let
-        pkgs = import nixpkgs {inherit system;};
-        pkg = self.packages.${system};
-      in {
-        inherit (pkg) test;
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+          package = self.packages.${system}.default;
+        in
+        {
+          inherit package;
 
-        lint = pkg.debug.overrideAttrs (old: {
-          name = "my-exe-lint";
-          nativeBuildInputs = (old.nativeBuildInputs or []) ++ [pkgs.clang-tools];
-          cmakeFlags =
-            (old.cmakeFlags or [])
-            ++ [
-              "-DCMAKE_C_CLANG_TIDY=clang-tidy;-warnings-as-errors=*"
-            ];
-        });
+          sanitizers = package.override {
+            buildType = "Debug";
+            withSanitizers = true;
+          };
 
-        format =
-          pkgs.runCommand "check-format" {
-            nativeBuildInputs = [pkgs.clang-tools];
-          } ''
-            find ${pkgs.lib.cleanSource ./.} -name '*.[ch]' -print0 | xargs -0 clang-format --dry-run --Werror
+          tidy = (package.override { buildType = "Debug"; }).overrideAttrs (old: {
+            pname = "${old.pname}-tidy";
+            nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.clang-tools ];
+            cmakeFlags = old.cmakeFlags ++ [ "-DCMAKE_C_CLANG_TIDY=clang-tidy" ];
+          });
 
-            touch $out
-          '';
-      }
-    );
-  };
+          format =
+            pkgs.runCommand "check-format"
+              {
+                nativeBuildInputs = with pkgs; [
+                  clang-tools
+                  gersemi
+                  nixfmt
+                ];
+              }
+              ''
+                cd ${self}
+
+                find src include tests -name '*.[ch]' -exec clang-format --dry-run --Werror {} +
+                gersemi --check CMakeLists.txt
+                find . -name '*.nix' -exec nixfmt --check {} +
+
+                touch $out
+              '';
+        }
+      );
+
+    };
 }
