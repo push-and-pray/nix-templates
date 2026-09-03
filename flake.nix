@@ -35,6 +35,10 @@
         path = ./c;
         description = "C template";
       };
+      c-simple = {
+        path = ./c-simple;
+        description = "Simple C template using GCC and Make";
+      };
     };
   };
 }
