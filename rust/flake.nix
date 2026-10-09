@@ -2,7 +2,10 @@
   description = "A simple Rust package";
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    naersk.url = "github:nix-community/naersk";
+    naersk = {
+      url = "github:nix-community/naersk";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -11,25 +14,29 @@
     naersk,
     ...
   }: let
-    systems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
+    systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
     forAllSystems = nixpkgs.lib.genAttrs systems;
-    nixpkgsFor = forAllSystems (system: import nixpkgs {inherit system;});
   in {
     packages = forAllSystems (system: let
-      pkgs = nixpkgsFor.${system};
+      pkgs = import nixpkgs {inherit system;};
       naersk' = pkgs.callPackage naersk {};
     in {
       default = naersk'.buildPackage {
-        src = ./.;
+        src = pkgs.lib.cleanSource ./.;
+        doCheck = true;
       };
+    });
+
+    checks = forAllSystems (system: {
+      default = self.packages.${system}.default;
     });
 
     devShells = forAllSystems (
       system: let
-        pkgs = nixpkgsFor.${system};
+        pkgs = import nixpkgs {inherit system;};
       in {
         default = pkgs.mkShell {
-          buildInputs = with pkgs; [rustc cargo];
+          nativeBuildInputs = with pkgs; [rustc cargo rustfmt clippy rust-analyzer];
         };
       }
     );
